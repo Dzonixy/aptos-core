@@ -1,0 +1,9 @@
+[package]
+name = "toycoin"
+version = "0.0.0"
+
+[dependencies]
+MoveStdlib = { git = "https://github.com/diem/move.git", subdir = "language/move-stdlib", rev = "main" }
+
+[addresses]
+std = "0x1"
