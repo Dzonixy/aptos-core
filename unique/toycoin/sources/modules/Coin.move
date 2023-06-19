@@ -1,21 +1,21 @@
 address 0x2 {
 
-    module Coin {
+    module UniqueToken {
 
-        struct Coin has drop {
+        struct UniqueToken has drop {
             value: u64,
         }
 
-        public fun mint(value: u64): Coin {
-            Coin { value }
+        public fun mint(value: u64): UniqueToken {
+            UniqueToken { value }
         }
 
-        public fun value(coin: &Coin): u64 {
-            coin.value
+        public fun value(unique_token: &UniqueToken): u64 {
+            unique_token.value
         }
 
-        public fun burn(coin: Coin): u64 {
-            let Coin { value } = coin;
+        public fun burn(unique_token: UniqueToken): u64 {
+            let UniqueToken { value } = unique_token;
             value
         }
     }

@@ -12,3 +12,4 @@ url = { workspace = true }
 tokio = { workspace = true }
 aptos-config = { workspace = true }
 regex ={ workspace = true }
+move = { workspace = true }
