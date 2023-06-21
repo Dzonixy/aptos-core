@@ -5,7 +5,10 @@ async fn main() {}
 mod tests {
     use aptos_api_test_context::{current_function_name, new_test_context, TestContext};
     use aptos_config::config::NodeConfig;
-    use aptos_sdk::{rest_client::Client, types::transaction::Script};
+    use aptos_sdk::{
+        rest_client::Client,
+        types::transaction::{Script, TransactionArgument},
+    };
 
     use move_binary_format::CompiledModule;
     use sealed_test::prelude::*;
@@ -53,10 +56,10 @@ mod tests {
         let mut binary = vec![];
         let module = package.modules().collect::<Vec<&CompiledModule>>()[0];
         module.serialize(&mut binary).unwrap();
-        println!("module binary: {:?}", binary);
 
-        let code = package.extract_script_code()[0].clone();
-        println!("code: {:?}", code);
+        let _code = package.extract_script_code()[0].clone();
+        // println!("code: {:?}", code);
+        // println!("code len : {:?}", code.len());
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -72,18 +75,31 @@ mod tests {
         let path = PathBuf::from(std::env!("CARGO_MANIFEST_DIR")).join("../toycoin/");
 
         let payload = TestContext::build_package(path.clone(), named_addresses);
-        println!(
-            "Transaction Payload: {:?}",
-            payload.clone().into_entry_function()
-        );
+
+        let compiled_script = std::fs::read(
+            PathBuf::from(std::env!("CARGO_MANIFEST_DIR"))
+                .join("../toycoin/build/toycoin/bytecode_scripts/main.mv"),
+        )
+        .unwrap();
+
+        let _ = std::fs::read_to_string(
+            PathBuf::from(std::env!("CARGO_MANIFEST_DIR"))
+                .join("../toycoin/sources/scripts/test-coin.move"),
+        )
+        .unwrap();
 
         context.publish_package(&mut root_account, payload).await;
 
-        root_account.sign_with_transaction_builder(
-            context
-                .transaction_factory()
-                .script(Script::new(vec![], vec![], vec![])),
-        );
+        // TODO: check if the transaction succeded
+        context
+            .commit_block(&vec![root_account.sign_with_transaction_builder(
+                context.transaction_factory().script(Script::new(
+                    compiled_script,
+                    vec![],
+                    vec![TransactionArgument::U64(1)],
+                )),
+            )])
+            .await;
     }
 
     async fn publish_marketplace() {
@@ -99,6 +115,8 @@ mod tests {
 
         let payload = TestContext::build_package(path, named_addresses);
         context.publish_package(&mut root_account, payload).await;
+
+        // TODO: test marketplace
     }
 
     #[sealed_test(env = [("RUST_MIN_STACK", "10485760")])]
