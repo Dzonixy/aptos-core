@@ -8,6 +8,7 @@ mod tests {
     use aptos_sdk::{rest_client::Client, types::transaction::Script};
 
     use move_binary_format::CompiledModule;
+    use sealed_test::prelude::*;
     use std::path::PathBuf;
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -36,7 +37,7 @@ mod tests {
             .await;
     }
 
-    #[tokio::test(flavor = "multi_thread", worker_threads = 6)]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn build_package() {
         let path = PathBuf::from(std::env!("CARGO_MANIFEST_DIR")).join("../toycoin/");
         let build_options = aptos_framework::BuildOptions {
@@ -58,7 +59,7 @@ mod tests {
         println!("code: {:?}", code);
     }
 
-    #[tokio::test(flavor = "multi_thread", worker_threads = 6)]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn build_and_publish() {
         let mut context = new_test_context(current_function_name!(), NodeConfig::default(), false);
         let mut root_account = context.root_account().await;
@@ -93,18 +94,17 @@ mod tests {
         let txn = context.create_user_account_by(&mut root_account, &package_account);
         context.commit_block(&vec![txn]).await;
 
-        let _named_addresses = vec![("Marketplace".to_string(), package_account.address())];
-        let _path = PathBuf::from(std::env!("CARGO_MANIFEST_DIR")).join("../marketplace");
-        // let payload = TestContext::build_package(path, named_addresses);
+        let named_addresses = vec![("Marketplace".to_string(), package_account.address())];
+        let path = PathBuf::from(std::env!("CARGO_MANIFEST_DIR")).join("../marketplace");
 
-        // context.publish_package(&mut root_account, payload).await;
+        let payload = TestContext::build_package(path, named_addresses);
+        context.publish_package(&mut root_account, payload).await;
     }
 
-    #[test]
+    #[sealed_test(env = [("RUST_MIN_STACK", "10485760")])]
     fn publish_marketplace_test() {
         tokio::runtime::Builder::new_multi_thread()
-            .thread_stack_size(104857600)
-            .worker_threads(6)
+            .worker_threads(2)
             .enable_all()
             .build()
             .unwrap()
