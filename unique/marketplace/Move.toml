@@ -1,0 +1,11 @@
+[package]
+name = "Marketplace"
+version = "0.0.0"
+
+[addresses]
+marketplace = "0x10"
+
+[dependencies]
+AptosFramework = { local = "../../aptos-move/framework/aptos-framework" }
+AptosToken = { local = "../../aptos-move/framework/aptos-token" }
+AptosTokenObjects = { local = "../../aptos-move/framework/aptos-token-objects" }

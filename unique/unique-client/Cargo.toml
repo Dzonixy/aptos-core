@@ -12,4 +12,6 @@ url = { workspace = true }
 tokio = { workspace = true }
 aptos-config = { workspace = true }
 regex ={ workspace = true }
-move = { workspace = true }
+move-binary-format = { workspace = true }
+bcs ={ workspace = true }
+aptos-framework = { workspace = true }

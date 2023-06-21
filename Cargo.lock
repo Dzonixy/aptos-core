@@ -12702,7 +12702,10 @@ version = "0.1.0"
 dependencies = [
  "aptos-api-test-context",
  "aptos-config",
+ "aptos-framework",
  "aptos-sdk",
+ "bcs 0.1.4",
+ "move-binary-format",
  "regex",
  "tokio",
  "url",
