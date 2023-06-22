@@ -3,9 +3,12 @@ async fn main() {}
 
 #[cfg(test)]
 mod tests {
-    use aptos_api_test_context::{current_function_name, new_test_context, TestContext};
+    use aptos_api_test_context::{
+        current_function_name, new_test_context, ApiSpecificConfig, TestContext,
+    };
     use aptos_config::config::NodeConfig;
     use aptos_sdk::{
+        crypto::hash::TestOnlyHash,
         rest_client::Client,
         types::transaction::{Script, TransactionArgument},
     };
@@ -65,16 +68,27 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn build_and_publish() {
         let mut context = new_test_context(current_function_name!(), NodeConfig::default(), false);
+        let client = match &context.api_specific_config {
+            ApiSpecificConfig::V1(s) => {
+                Client::new(url::Url::parse(&format!("http://{s}")).unwrap())
+            },
+        };
         let mut root_account = context.root_account().await;
+        let user_account = context.gen_account();
 
-        let package_account = context.gen_account();
-        let txn = context.create_user_account_by(&mut root_account, &package_account);
-        context.commit_block(&vec![txn]).await;
+        let create_user_txn = context.create_user_account_by(&mut root_account, &user_account);
+        let account_transfer_txn =
+            context.account_transfer(&mut root_account, &user_account, 10_000_000_000);
 
-        let named_addresses = vec![("toycoin".to_string(), package_account.address())];
+        context
+            .commit_block(&[create_user_txn, account_transfer_txn])
+            .await;
+
+        let named_addresses = vec![("UniqueToken".to_string(), user_account.address())];
         let path = PathBuf::from(std::env!("CARGO_MANIFEST_DIR")).join("../toycoin/");
 
         let payload = TestContext::build_package(path.clone(), named_addresses);
+        let payload_clone = payload.clone();
 
         let compiled_script = std::fs::read(
             PathBuf::from(std::env!("CARGO_MANIFEST_DIR"))
@@ -82,24 +96,48 @@ mod tests {
         )
         .unwrap();
 
-        let _ = std::fs::read_to_string(
+        let publish_txn = context.publish_package(&mut root_account, payload).await;
+
+        let _ = context
+            // .expect_status_code(200)
+            .get(&account_resources(&user_account.address().to_string()))
+            .await;
+        let resp = context
+            // .expect_status_code(200)
+            .get(&account_modules(&root_account.address().to_string()))
+            .await;
+
+        // println!("{resp:#?}");
+        // context.check_golden_output(resp);
+        // return;
+        // let publish_txn_hash = publish_txn.test_only_hash();
+        // context.commit_block(&[publish_txn]).await;
+
+        // println!("{publish_txn_hash:?}");
+
+        // let temp = client
+        //     .get_account_modules(package_account.address())
+        //     .await
+        //     .unwrap();
+        // println!("{temp:?}");
+        // context
+        //     .commit_block(&vec![root_account.sign_with_transaction_builder(
+        //         context.transaction_factory().script(Script::new(
+        //             compiled_script,
+        //             vec![],
+        //             vec![TransactionArgument::U64(1)],
+        //         )),
+        //     )])
+        //     .await;
+    }
+
+    #[tokio::test]
+    async fn compile_script_from_string() {
+        let script_string = std::fs::read_to_string(
             PathBuf::from(std::env!("CARGO_MANIFEST_DIR"))
                 .join("../toycoin/sources/scripts/test-coin.move"),
         )
         .unwrap();
-
-        context.publish_package(&mut root_account, payload).await;
-
-        // TODO: check if the transaction succeded
-        context
-            .commit_block(&vec![root_account.sign_with_transaction_builder(
-                context.transaction_factory().script(Script::new(
-                    compiled_script,
-                    vec![],
-                    vec![TransactionArgument::U64(1)],
-                )),
-            )])
-            .await;
     }
 
     async fn publish_marketplace() {
@@ -127,5 +165,13 @@ mod tests {
             .build()
             .unwrap()
             .block_on(publish_marketplace())
+    }
+
+    fn account_resources(address: &str) -> String {
+        format!("/accounts/{}/resources", address)
+    }
+
+    fn account_modules(address: &str) -> String {
+        format!("/accounts/{}/modules", address)
     }
 }
