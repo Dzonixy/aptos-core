@@ -1,9 +1,10 @@
 [package]
-name = "toycoin"
+name = "Toycoin"
 version = "0.0.0"
-
-[dependencies]
-MoveStdlib = { git = "https://github.com/diem/move.git", subdir = "language/move-stdlib", rev = "main" }
 
 [addresses]
 std = "0x1"
+toycoin = "0xa550c18"
+
+[dependencies]
+AptosStdlib = { local = "../../aptos-move/framework/aptos-stdlib" }

@@ -8,14 +8,15 @@ mod tests {
     };
     use aptos_config::config::NodeConfig;
     use aptos_sdk::{
-        crypto::hash::TestOnlyHash,
-        rest_client::Client,
+        rest_client::{aptos_api_types::Address, Client},
         types::transaction::{Script, TransactionArgument},
     };
+    use serde_json::json;
 
+    use aptos_sdk::types::account_address::AccountAddress;
     use move_binary_format::CompiledModule;
     use sealed_test::prelude::*;
-    use std::path::PathBuf;
+    use std::{path::PathBuf, str::FromStr};
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn client_build() {
@@ -65,8 +66,18 @@ mod tests {
         // println!("code len : {:?}", code.len());
     }
 
-    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    // #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn build_and_publish() {
+        // aptos_logger::Logger::new().init();
+
+        let move_toml_string = std::fs::read_to_string(
+            PathBuf::from(std::env!("CARGO_MANIFEST_DIR"))
+                .join(&format!("../{}/Move.toml", "toycoin")),
+        )
+        .unwrap();
+
+        let _move_toml = &move_toml_string.parse::<toml::Value>().unwrap();
+
         let mut context = new_test_context(current_function_name!(), NodeConfig::default(), false);
         let client = match &context.api_specific_config {
             ApiSpecificConfig::V1(s) => {
@@ -74,85 +85,82 @@ mod tests {
             },
         };
         let mut root_account = context.root_account().await;
-        let user_account = context.gen_account();
 
-        let create_user_txn = context.create_user_account_by(&mut root_account, &user_account);
-        let account_transfer_txn =
-            context.account_transfer(&mut root_account, &user_account, 10_000_000_000);
+        let module_name = "unique".to_string();
+        let module_address = AccountAddress::from_str("0x2").unwrap();
+
+        let named_addresses = vec![(module_name.clone(), root_account.address())];
+        let path =
+            PathBuf::from(std::env!("CARGO_MANIFEST_DIR")).join(&format!("../{}/", "toycoin"));
 
         context
-            .commit_block(&[create_user_txn, account_transfer_txn])
+            .publish_package(
+                &mut root_account,
+                TestContext::build_package(path.clone(), named_addresses),
+            )
             .await;
 
-        let named_addresses = vec![("UniqueToken".to_string(), user_account.address())];
-        let path = PathBuf::from(std::env!("CARGO_MANIFEST_DIR")).join("../toycoin/");
+        let module = client
+            .get_account_module(root_account.address(), "unique")
+            .await
+            .unwrap();
 
-        let payload = TestContext::build_package(path.clone(), named_addresses);
-        let payload_clone = payload.clone();
+        println!("{module:?}");
 
-        let compiled_script = std::fs::read(
-            PathBuf::from(std::env!("CARGO_MANIFEST_DIR"))
-                .join("../toycoin/build/toycoin/bytecode_scripts/main.mv"),
-        )
-        .unwrap();
+        // println!(
+        //     "{:?}",
+        //     client
+        //         .get_account_module(AccountAddress::from_str("0x1").unwrap(), "signer")
+        //         .await
+        //         .unwrap()
+        // );
 
-        let publish_txn = context.publish_package(&mut root_account, payload).await;
-
-        let _ = context
-            // .expect_status_code(200)
-            .get(&account_resources(&user_account.address().to_string()))
-            .await;
-        let resp = context
-            // .expect_status_code(200)
-            .get(&account_modules(&root_account.address().to_string()))
-            .await;
-
-        // println!("{resp:#?}");
-        // context.check_golden_output(resp);
-        // return;
-        // let publish_txn_hash = publish_txn.test_only_hash();
-        // context.commit_block(&[publish_txn]).await;
-
-        // println!("{publish_txn_hash:?}");
-
-        // let temp = client
-        //     .get_account_modules(package_account.address())
+        // let module_bytecode = client
+        //     .get_account_module(module_address, &module_name)
         //     .await
         //     .unwrap();
-        // println!("{temp:?}");
-        // context
-        //     .commit_block(&vec![root_account.sign_with_transaction_builder(
-        //         context.transaction_factory().script(Script::new(
-        //             compiled_script,
-        //             vec![],
-        //             vec![TransactionArgument::U64(1)],
-        //         )),
-        //     )])
-        //     .await;
+
+        // let compiled_script = std::fs::read(
+        //     PathBuf::from(std::env!("CARGO_MANIFEST_DIR"))
+        //         .join("../toycoin/build/toycoin/bytecode_scripts/main.mv"),
+        // )
+        // .unwrap();
+
+        // let script_txn =
+        //     root_account.sign_with_transaction_builder(context.transaction_factory().script(
+        //         Script::new(compiled_script, vec![], vec![TransactionArgument::U64(1)]),
+        //     ));
+
+        // context.commit_block(&vec![script_txn]).await;
     }
 
-    #[tokio::test]
-    async fn compile_script_from_string() {
-        let script_string = std::fs::read_to_string(
-            PathBuf::from(std::env!("CARGO_MANIFEST_DIR"))
-                .join("../toycoin/sources/scripts/test-coin.move"),
-        )
-        .unwrap();
+    #[sealed_test(env = [("RUST_MIN_STACK", "10485760")])]
+    fn publish_toycoin_test() {
+        tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(1)
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(build_and_publish())
     }
 
     async fn publish_marketplace() {
         let mut context = new_test_context(current_function_name!(), NodeConfig::default(), false);
+        let client = match &context.api_specific_config {
+            ApiSpecificConfig::V1(s) => {
+                Client::new(url::Url::parse(&format!("http://{s}")).unwrap())
+            },
+        };
         let mut root_account = context.root_account().await;
 
-        let package_account = context.gen_account();
-        let txn = context.create_user_account_by(&mut root_account, &package_account);
-        context.commit_block(&vec![txn]).await;
-
-        let named_addresses = vec![("Marketplace".to_string(), package_account.address())];
+        let module_address = AccountAddress::from_str("42").unwrap();
+        let named_addresses = vec![("marketplace".to_string(), module_address)];
         let path = PathBuf::from(std::env!("CARGO_MANIFEST_DIR")).join("../marketplace");
 
         let payload = TestContext::build_package(path, named_addresses);
         context.publish_package(&mut root_account, payload).await;
+
+        let module = client.get_account_modules(module_address).await.unwrap();
 
         // TODO: test marketplace
     }
@@ -160,18 +168,19 @@ mod tests {
     #[sealed_test(env = [("RUST_MIN_STACK", "10485760")])]
     fn publish_marketplace_test() {
         tokio::runtime::Builder::new_multi_thread()
-            .worker_threads(2)
+            .worker_threads(1)
             .enable_all()
             .build()
             .unwrap()
             .block_on(publish_marketplace())
     }
 
-    fn account_resources(address: &str) -> String {
-        format!("/accounts/{}/resources", address)
-    }
-
-    fn account_modules(address: &str) -> String {
-        format!("/accounts/{}/modules", address)
+    #[tokio::test]
+    async fn compile_script_from_string() {
+        let _script_string = std::fs::read_to_string(
+            PathBuf::from(std::env!("CARGO_MANIFEST_DIR"))
+                .join("../toycoin/sources/scripts/test-coin.move"),
+        )
+        .unwrap();
     }
 }

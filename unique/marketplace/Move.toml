@@ -3,7 +3,7 @@ name = "Marketplace"
 version = "0.0.0"
 
 [addresses]
-marketplace = "0x10"
+marketplace = "0x42"
 
 [dependencies]
 AptosFramework = { local = "../../aptos-move/framework/aptos-framework" }
