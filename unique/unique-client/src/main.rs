@@ -16,12 +16,12 @@ mod tests {
     use aptos_sdk::types::account_address::AccountAddress;
     use move_binary_format::CompiledModule;
     use sealed_test::prelude::*;
-    use std::{path::PathBuf, str::FromStr};
+    use std::{io::Write, path::PathBuf, str::FromStr};
+    use toml::toml;
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn client_build() {
         let _client = Client::new(url::Url::parse("http://0.0.0.0:8080").unwrap());
-        //     println!("Client: {:#?}", client);
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -69,15 +69,6 @@ mod tests {
     // #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn build_and_publish() {
         // aptos_logger::Logger::new().init();
-
-        let move_toml_string = std::fs::read_to_string(
-            PathBuf::from(std::env!("CARGO_MANIFEST_DIR"))
-                .join(&format!("../{}/Move.toml", "toycoin")),
-        )
-        .unwrap();
-
-        let _move_toml = &move_toml_string.parse::<toml::Value>().unwrap();
-
         let mut context = new_test_context(current_function_name!(), NodeConfig::default(), false);
         let client = match &context.api_specific_config {
             ApiSpecificConfig::V1(s) => {
@@ -85,53 +76,56 @@ mod tests {
             },
         };
         let mut root_account = context.root_account().await;
+        let mut module_account = context.gen_account();
 
+        let transfer_txn =
+            context.account_transfer(&mut root_account, &module_account, 1_000_000_000);
+        context.commit_block(&[transfer_txn]).await;
+
+        let module_address_hex = module_account.address().to_hex_literal();
         let module_name = "unique".to_string();
-        let module_address = AccountAddress::from_str("0x2").unwrap();
 
-        let named_addresses = vec![(module_name.clone(), root_account.address())];
+        let toml_path = PathBuf::from(std::env!("CARGO_MANIFEST_DIR"))
+            .join(&format!("../{}/Move.toml", "toycoin"));
+        let mut file = std::fs::File::create(toml_path.clone()).unwrap();
+        let move_toml = toml! {
+            [package]
+            name = "Toycoin"
+            version = "0.0.0"
+
+            [addresses]
+            std = "0x1"
+            toycoin = module_address_hex
+
+            [dependencies]
+            AptosStdlib = { local = "../../aptos-move/framework/aptos-stdlib" }
+        };
+        file.write_all(move_toml.to_string().as_bytes()).unwrap();
+
+        let named_addresses = vec![(module_name.clone(), module_account.address())];
         let path =
             PathBuf::from(std::env!("CARGO_MANIFEST_DIR")).join(&format!("../{}/", "toycoin"));
 
-        context
-            .publish_package(
-                &mut root_account,
-                TestContext::build_package(path.clone(), named_addresses),
-            )
-            .await;
+        let payload = TestContext::build_package(path.clone(), named_addresses);
+        context.publish_package(&mut module_account, payload).await;
 
-        let module = client
-            .get_account_module(root_account.address(), "unique")
+        client
+            .get_account_module(module_account.address(), "unique")
             .await
             .unwrap();
 
-        println!("{module:?}");
+        let compiled_script = std::fs::read(
+            PathBuf::from(std::env!("CARGO_MANIFEST_DIR"))
+                .join("../toycoin/build/toycoin/bytecode_scripts/main.mv"),
+        )
+        .unwrap();
 
-        // println!(
-        //     "{:?}",
-        //     client
-        //         .get_account_module(AccountAddress::from_str("0x1").unwrap(), "signer")
-        //         .await
-        //         .unwrap()
-        // );
+        let script_txn =
+            root_account.sign_with_transaction_builder(context.transaction_factory().script(
+                Script::new(compiled_script, vec![], vec![TransactionArgument::U64(1)]),
+            ));
 
-        // let module_bytecode = client
-        //     .get_account_module(module_address, &module_name)
-        //     .await
-        //     .unwrap();
-
-        // let compiled_script = std::fs::read(
-        //     PathBuf::from(std::env!("CARGO_MANIFEST_DIR"))
-        //         .join("../toycoin/build/toycoin/bytecode_scripts/main.mv"),
-        // )
-        // .unwrap();
-
-        // let script_txn =
-        //     root_account.sign_with_transaction_builder(context.transaction_factory().script(
-        //         Script::new(compiled_script, vec![], vec![TransactionArgument::U64(1)]),
-        //     ));
-
-        // context.commit_block(&vec![script_txn]).await;
+        context.commit_block(&vec![script_txn]).await;
     }
 
     #[sealed_test(env = [("RUST_MIN_STACK", "10485760")])]
