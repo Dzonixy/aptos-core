@@ -1,5 +1,13 @@
+use aptos_api_test_context::{current_function_name, new_test_context, ApiSpecificConfig};
+use aptos_config::config::NodeConfig;
+use aptos_node::AptosNodeArgs;
+use aptos_sdk::rest_client::Client;
+use clap::Parser;
+
 #[tokio::main]
-async fn main() {}
+async fn main() {
+    AptosNodeArgs::parse().run()
+}
 
 #[cfg(test)]
 mod tests {
@@ -8,13 +16,11 @@ mod tests {
     };
     use aptos_config::config::NodeConfig;
     use aptos_sdk::{
-        rest_client::{aptos_api_types::Address, Client},
+        rest_client::Client,
         types::transaction::{Script, TransactionArgument},
     };
-    use serde_json::json;
 
     use aptos_sdk::types::account_address::AccountAddress;
-    use move_binary_format::CompiledModule;
     use sealed_test::prelude::*;
     use std::{io::Write, path::PathBuf, str::FromStr};
     use toml::toml;
@@ -44,28 +50,6 @@ mod tests {
             .await;
     }
 
-    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn build_package() {
-        let path = PathBuf::from(std::env!("CARGO_MANIFEST_DIR")).join("../toycoin/");
-        let build_options = aptos_framework::BuildOptions {
-            with_srcs: false,
-            with_abis: false,
-            with_source_maps: false,
-            with_error_map: false,
-            ..aptos_framework::BuildOptions::default()
-        };
-        let package = aptos_framework::BuiltPackage::build(path, build_options)
-            .expect("building package must succeed");
-
-        let mut binary = vec![];
-        let module = package.modules().collect::<Vec<&CompiledModule>>()[0];
-        module.serialize(&mut binary).unwrap();
-
-        let _code = package.extract_script_code()[0].clone();
-        // println!("code: {:?}", code);
-        // println!("code len : {:?}", code.len());
-    }
-
     // #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn build_and_publish() {
         // aptos_logger::Logger::new().init();
@@ -75,6 +59,7 @@ mod tests {
                 Client::new(url::Url::parse(&format!("http://{s}")).unwrap())
             },
         };
+
         let mut root_account = context.root_account().await;
         let mut module_account = context.gen_account();
 

@@ -1,6 +1,6 @@
 [addresses]
 std = "0x1"
-toycoin = "0x2"
+toycoin = "0x34bf7e2d17674feb234371a7ea58efd715f0e56ba20ebf13789480d9d643afaf"
 [dependencies.AptosStdlib]
 local = "../../aptos-move/framework/aptos-stdlib"
 

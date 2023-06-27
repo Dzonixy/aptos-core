@@ -12737,12 +12737,18 @@ dependencies = [
  "aptos-api-test-context",
  "aptos-config",
  "aptos-framework",
+ "aptos-logger",
+ "aptos-node",
  "aptos-sdk",
  "bcs 0.1.4",
+ "clap 3.2.23",
  "move-binary-format",
  "regex",
  "sealed_test",
+ "serde 1.0.149",
+ "serde_json",
  "tokio",
+ "toml 0.5.9",
  "url",
 ]
 
