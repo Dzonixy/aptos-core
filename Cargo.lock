@@ -12840,7 +12840,7 @@ dependencies = [
  "aptos-node",
  "aptos-sdk",
  "bcs 0.1.4",
- "clap 3.2.23",
+ "clap 4.3.5",
  "move-binary-format",
  "regex",
  "sealed_test",

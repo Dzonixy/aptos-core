@@ -15,8 +15,8 @@ aptos-framework = { workspace = true }
 move-binary-format = { workspace = true }
 url = { workspace = true }
 tokio = { workspace = true }
-regex ={ workspace = true }
-bcs ={ workspace = true }
+regex = { workspace = true }
+bcs = { workspace = true }
 sealed_test = "1.0.0"
 serde_json = { workspace = true }
 serde = { workspace = true }
