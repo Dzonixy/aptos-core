@@ -1,3 +1,6 @@
+use std::path::PathBuf;
+
+use aptos_api_test_context::TestContext;
 use aptos_cached_packages::aptos_stdlib;
 use aptos_language_e2e_tests::{account::Account, executor::FakeExecutor};
 use aptos_types::transaction::{ExecutionStatus, TransactionStatus};
@@ -43,4 +46,19 @@ fn mint_to_new_account() {
         output.status(),
         &TransactionStatus::Keep(ExecutionStatus::Success),
     );
+
+    let named_addresses = vec![("toycoin".to_string(), *root.address())];
+    let path = PathBuf::from(std::env!("CARGO_MANIFEST_DIR")).join("../toycoin");
+
+    let payload = TestContext::build_package(path, named_addresses);
+
+    let publish_txn = root
+        .transaction()
+        .payload(payload)
+        .gas_unit_price(100)
+        .sequence_number(1)
+        .sign();
+
+    let publish_output = executor.execute_transaction(publish_txn);
+    executor.apply_write_set(publish_output.write_set());
 }
