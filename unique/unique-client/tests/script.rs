@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use aptos_api_test_context::TestContext;
 use aptos_cached_packages::aptos_stdlib;
 use aptos_language_e2e_tests::{account::Account, executor::FakeExecutor};
-use aptos_types::transaction::{ExecutionStatus, TransactionStatus};
+use aptos_types::transaction::{ExecutionStatus, Script, TransactionArgument, TransactionStatus};
 
 #[test]
 fn mint_to_new_account() {
@@ -61,4 +61,25 @@ fn mint_to_new_account() {
 
     let publish_output = executor.execute_transaction(publish_txn);
     executor.apply_write_set(publish_output.write_set());
+
+    let script_path = PathBuf::from(std::env!("CARGO_MANIFEST_DIR"))
+        .join("../toycoin/build/Toycoin/bytecode_scripts/main.mv");
+    let code = std::fs::read(script_path).unwrap();
+    let script_txn = root
+        .transaction()
+        .script(Script::new(
+            code,
+            vec![],
+            vec![TransactionArgument::U64(1), TransactionArgument::U64(1)],
+        ))
+        .gas_unit_price(100)
+        .sequence_number(2)
+        .sign();
+
+    let script_output = executor.execute_transaction(script_txn);
+
+    assert_eq!(
+        script_output.status(),
+        &TransactionStatus::Keep(ExecutionStatus::Success)
+    );
 }
