@@ -1,6 +1,5 @@
 script {
     use std::vector;
-    use std::debug;
     use toycoin::unique::gimme_five;
     use toycoin::unique;
 

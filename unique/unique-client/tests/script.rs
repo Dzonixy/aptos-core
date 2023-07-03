@@ -18,7 +18,7 @@ fn mint_to_new_account() {
     executor.add_account_data(&new_account);
     let supply_before = executor.read_coin_supply().unwrap();
 
-    let mint_amount = 1_000_000;
+    let mint_amount = 1_000_000_000;
     let txn = root
         .transaction()
         .payload(aptos_stdlib::aptos_coin_mint(
@@ -42,22 +42,25 @@ fn mint_to_new_account() {
         supply_before + (mint_amount as u128) - (output.gas_used() * 100) as u128
     );
 
+    let payer = &executor.create_accounts(1, mint_amount, 0)[0];
+
     // checks that the airdrop succeded
     assert_eq!(
         output.status(),
         &TransactionStatus::Keep(ExecutionStatus::Success),
     );
 
-    let named_addresses = vec![("toycoin".to_string(), *root.address())];
+    let named_addresses = vec![("toycoin".to_string(), *new_account.address())];
     let path = PathBuf::from(std::env!("CARGO_MANIFEST_DIR")).join("../toycoin");
 
     let payload = TestContext::build_package(path, named_addresses);
 
-    let publish_txn = root
+    let publish_txn = new_account
+        .account()
         .transaction()
         .payload(payload)
         .gas_unit_price(100)
-        .sequence_number(1)
+        .sequence_number(0)
         .sign();
 
     let publish_output = executor.execute_transaction(publish_txn);
@@ -72,7 +75,7 @@ fn mint_to_new_account() {
         .join("../toycoin/build/Toycoin/bytecode_scripts/main.mv");
     let code = std::fs::read(script_path).unwrap();
 
-    let script_txn = root
+    let script_txn = payer
         .transaction()
         .script(Script::new(
             code,
@@ -80,7 +83,7 @@ fn mint_to_new_account() {
             vec![TransactionArgument::U64(1), TransactionArgument::U64(1)],
         ))
         .gas_unit_price(100)
-        .sequence_number(2)
+        .sequence_number(0)
         .sign();
 
     let script_output = executor.execute_transaction(script_txn);

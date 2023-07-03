@@ -12,4 +12,4 @@ vm_reserved = "0x0"
 
 [dependencies]
 AptosFramework = { local = "../../aptos-move/framework/aptos-framework" }
-# MoveStdlib = { local = "../../aptos-move/framework/move-stdlib" }
+AptosToken = { local = "../../aptos-move/framework/aptos-token" }
