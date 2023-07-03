@@ -1,9 +1,15 @@
-[addresses]
-# std = "0x1"
-
-[dependencies]
-AptosStdlib = { local = "../../aptos-move/framework/aptos-stdlib" }
-
 [package]
 name = "Toycoin"
 version = "0.0.0"
+
+[addresses]
+std = "0x1"
+aptos_std = "0x1"
+aptos_framework = "0x1"
+aptos_token = "0x3"
+core_resources = "0xA550C18"
+vm_reserved = "0x0"
+
+[dependencies]
+AptosFramework = { local = "../../aptos-move/framework/aptos-framework" }
+# MoveStdlib = { local = "../../aptos-move/framework/move-stdlib" }

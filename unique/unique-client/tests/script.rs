@@ -42,6 +42,7 @@ fn mint_to_new_account() {
         supply_before + (mint_amount as u128) - (output.gas_used() * 100) as u128
     );
 
+    // checks that the airdrop succeded
     assert_eq!(
         output.status(),
         &TransactionStatus::Keep(ExecutionStatus::Success),
@@ -62,9 +63,15 @@ fn mint_to_new_account() {
     let publish_output = executor.execute_transaction(publish_txn);
     executor.apply_write_set(publish_output.write_set());
 
+    assert_eq!(
+        publish_output.status(),
+        &TransactionStatus::Keep(ExecutionStatus::Success)
+    );
+
     let script_path = PathBuf::from(std::env!("CARGO_MANIFEST_DIR"))
         .join("../toycoin/build/Toycoin/bytecode_scripts/main.mv");
     let code = std::fs::read(script_path).unwrap();
+
     let script_txn = root
         .transaction()
         .script(Script::new(

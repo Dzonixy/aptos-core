@@ -3,7 +3,7 @@ use aptos_api_test_context::{
 };
 use aptos_config::config::NodeConfig;
 use aptos_sdk::rest_client::Client;
-
+use aptos_types::transaction::{Script, TransactionArgument};
 use std::path::PathBuf;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -38,4 +38,17 @@ async fn build_and_publish() {
             .len(),
         0
     );
+    let script_path = PathBuf::from(std::env!("CARGO_MANIFEST_DIR"))
+        .join("../toycoin/build/Toycoin/bytecode_scripts/main.mv");
+    let code = std::fs::read(script_path).unwrap();
+
+    let script_txn = module_account.sign_with_transaction_builder(
+        context.transaction_factory().script(Script::new(
+            code,
+            vec![],
+            vec![TransactionArgument::U64(1), TransactionArgument::U64(1)],
+        )),
+    );
+
+    context.commit_block(&[script_txn]).await;
 }
