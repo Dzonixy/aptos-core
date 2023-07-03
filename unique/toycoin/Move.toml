@@ -13,3 +13,4 @@ vm_reserved = "0x0"
 [dependencies]
 AptosFramework = { local = "../../aptos-move/framework/aptos-framework" }
 AptosToken = { local = "../../aptos-move/framework/aptos-token" }
+Marketplace = { local = "../marketplace" }

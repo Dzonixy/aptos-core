@@ -2,6 +2,7 @@ module toycoin::unique {
     // use 0x1::aptos_account;
     // use 0x1::block;
     // use 0x1::coin;
+    use marketplace::coin_listing;
  
     struct Unique has drop, copy {
         value: u64,

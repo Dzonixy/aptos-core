@@ -42,6 +42,29 @@ fn mint_to_new_account() {
         supply_before + (mint_amount as u128) - (output.gas_used() * 100) as u128
     );
 
+    // Deploy marketplace
+    let marketplace_named_addresses = vec![("marketplace".to_string(), *new_account.address())];
+    let marketplace_path = PathBuf::from(std::env!("CARGO_MANIFEST_DIR")).join("../marketplace");
+
+    let marketplace_payload =
+        TestContext::build_package(marketplace_path, marketplace_named_addresses);
+
+    let publish_marketplace_txn = new_account
+        .account()
+        .transaction()
+        .payload(marketplace_payload)
+        .gas_unit_price(100)
+        .sequence_number(0)
+        .sign();
+
+    let publish_output = executor.execute_transaction(publish_marketplace_txn);
+    executor.apply_write_set(publish_output.write_set());
+
+    assert_eq!(
+        publish_output.status(),
+        &TransactionStatus::Keep(ExecutionStatus::Success)
+    );
+
     let payer = &executor.create_accounts(1, mint_amount, 0)[0];
 
     // checks that the airdrop succeded
@@ -60,7 +83,7 @@ fn mint_to_new_account() {
         .transaction()
         .payload(payload)
         .gas_unit_price(100)
-        .sequence_number(0)
+        .sequence_number(1)
         .sign();
 
     let publish_output = executor.execute_transaction(publish_txn);
