@@ -3,9 +3,9 @@ module toycoin::unique {
     // use 0x1::block;
     // use 0x1::coin;
     // use marketplace::coin_listing;
-    use std::event::{Self, EventHandle};
+    // use std::event::{Self, EventHandle};
     use std::signer;
-    use std::vector;
+    // use std::vector;
 
     struct UniqueEvent has drop, store { msg: vector<u8> }
 
