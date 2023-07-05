@@ -24,15 +24,16 @@ fn deserializing_resources() {
     let package_path = PathBuf::from(std::env!("CARGO_MANIFEST_DIR")).join("../toycoin");
     h.publish_package_with_options(&module_account, &package_path, build_options);
 
-    let script_path = PathBuf::from(std::env!("CARGO_MANIFEST_DIR"))
+    let mut script_path = PathBuf::from(std::env!("CARGO_MANIFEST_DIR"))
         .join("../toycoin/build/Toycoin/bytecode_scripts/main.mv");
-    let code = std::fs::read(script_path).unwrap();
+    let mut code = std::fs::read(script_path).unwrap();
 
-    let expected_recource = UniqueEventHandle {
-        number: 42,
+    let number = 42;
+    let expected_recource = UniqueResource {
+        number,
         msg: "hello world".to_string(),
     };
-    let script_txn = h.create_script(
+    let mut script_txn = h.create_script(
         &payer,
         code,
         vec![],
@@ -48,23 +49,47 @@ fn deserializing_resources() {
         TransactionStatus::Keep(aptos_types::transaction::ExecutionStatus::Success)
     );
 
-    let resource = h
-        .read_resource::<UniqueEventHandle>(
+    let mut resource = h
+        .read_resource::<UniqueResource>(
             payer.address(),
             StructTag {
                 address: module_account.address().to_owned(),
                 module: Identifier::new("unique").unwrap(),
-                name: Identifier::new("UniqueEventHandle").unwrap(),
+                name: Identifier::new("UniqueResource").unwrap(),
                 type_params: vec![],
             },
         )
         .unwrap();
 
-    assert_eq!(resource, expected_recource)
+    assert_eq!(resource, expected_recource);
+
+    script_path = PathBuf::from(std::env!("CARGO_MANIFEST_DIR"))
+        .join("../toycoin/build/Toycoin/bytecode_scripts/add_one_number.mv");
+    code = std::fs::read(script_path).unwrap();
+
+    script_txn = h.create_script(&payer, code, vec![], vec![]);
+    assert_eq!(
+        h.run(script_txn),
+        TransactionStatus::Keep(aptos_types::transaction::ExecutionStatus::Success)
+    );
+
+    resource = h
+        .read_resource::<UniqueResource>(
+            payer.address(),
+            StructTag {
+                address: module_account.address().to_owned(),
+                module: Identifier::new("unique").unwrap(),
+                name: Identifier::new("UniqueResource").unwrap(),
+                type_params: vec![],
+            },
+        )
+        .unwrap();
+
+    assert_eq!(number + 1, resource.number);
 }
 
 #[derive(Deserialize, Debug, PartialEq, PartialOrd)]
-pub struct UniqueEventHandle {
+pub struct UniqueResource {
     pub number: u64,
     pub msg: String,
 }

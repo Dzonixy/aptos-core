@@ -9,11 +9,10 @@ module toycoin::unique {
 
     struct UniqueEvent has drop, store { msg: vector<u8> }
 
-    struct UniqueEventHandle has key, store {
-        // unique_events: EventHandle<UniqueEvent>,
-        // unique_events: UniqueEvent,
+    struct UniqueResource has key, store {
         number: u64,
         msg: vector<u8>,
+        // events: EventHandle<UniqueEvent>,
     }
  
     struct Unique has drop, copy {
@@ -22,11 +21,16 @@ module toycoin::unique {
     }
 
     public fun new_unique(account: &signer, number: u64, msg: vector<u8>) {
-        move_to<UniqueEventHandle>(account, 
-        UniqueEventHandle {
+        move_to<UniqueResource>(account, 
+        UniqueResource {
             number,
             msg,
         });
+    }
+
+    public fun add_one_number(account: &signer) acquires UniqueResource {
+        let unique_recource = borrow_global_mut<UniqueResource>(signer::address_of(account));
+        unique_recource.number = unique_recource.number + 1;
     }
 
     public fun sum(a: u64, b: u64): u64 {
