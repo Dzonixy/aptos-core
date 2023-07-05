@@ -17,6 +17,8 @@ aptos-cached-packages = { workspace = true }
 move-binary-format = { workspace = true }
 aptos-vm-genesis = { workspace = true }
 aptos-types = { workspace = true }
+e2e-move-tests = { path = "../../aptos-move/e2e-move-tests" }
+
 
 url = { workspace = true }
 tokio = { workspace = true }

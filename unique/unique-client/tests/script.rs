@@ -3,7 +3,10 @@ use std::path::PathBuf;
 use aptos_api_test_context::TestContext;
 use aptos_cached_packages::aptos_stdlib;
 use aptos_language_e2e_tests::{account::Account, executor::FakeExecutor};
-use aptos_types::transaction::{ExecutionStatus, Script, TransactionArgument, TransactionStatus};
+use aptos_types::{
+    account_config::{AccountResource, ObjectGroupResource},
+    transaction::{ExecutionStatus, Script, TransactionArgument, TransactionStatus},
+};
 
 #[test]
 fn mint_to_new_account() {
@@ -110,6 +113,7 @@ fn mint_to_new_account() {
         .sign();
 
     let script_output = executor.execute_transaction(script_txn);
+    executor.apply_write_set(script_output.write_set());
 
     assert_eq!(
         script_output.status(),
