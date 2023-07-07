@@ -14,10 +14,14 @@ module toycoin::unique {
         msg: vector<u8>,
         // events: EventHandle<UniqueEvent>,
     }
+
+    struct ParsedStruct has drop {
+        number_u64: u64,
+        number_u8: u8,
+    }
  
     struct Unique has drop, copy {
         value: u64,
-
     }
 
     public fun new_unique(account: &signer, number: u64, msg: vector<u8>) {
@@ -46,10 +50,18 @@ module toycoin::unique {
     public fun gimme_five(): u64 {
         5
     }
+
+    public fun parse_vector_to_struct(vec: vector<u8>): ParsedStruct {
+        from_bytes<ParsedStruct>(vec)
+    }
+
+    public fun get_number_u64(ps: &ParsedStruct): u64 {
+       *&ps.number_u64
+    }
+
+    public fun get_number_u8(ps: &ParsedStruct): u8 {
+        *&ps.number_u8
+    }
+
+    public native fun from_bytes<T>(bytes: vector<u8>): T;
 }
-
-
-// event::emit_event<DepositEvent>(
-//             &mut coin_store.deposit_events,
-//             DepositEvent { amount: coin.value },
-//         );

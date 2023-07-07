@@ -15,6 +15,8 @@ script {
 
         new_unique(account, number, c);
 
+        debug::print(&b"hello Gto");
+
         debug::print(&signer::address_of(account));
         assert!(a == b, 100);
         assert!(gimme_five() == 5, 101);

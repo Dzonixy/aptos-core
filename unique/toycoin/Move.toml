@@ -9,8 +9,10 @@ aptos_framework = "0x1"
 aptos_token = "0x3"
 core_resources = "0xA550C18"
 vm_reserved = "0x0"
+Extensions = "0x1"
 
 [dependencies]
 AptosFramework = { local = "../../aptos-move/framework/aptos-framework" }
 AptosToken = { local = "../../aptos-move/framework/aptos-token" }
+MoveStdlib = { local = "../../aptos-move/framework/move-stdlib" }
 # Marketplace = { local = "../marketplace" }
