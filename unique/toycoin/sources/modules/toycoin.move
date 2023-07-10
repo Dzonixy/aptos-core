@@ -1,35 +1,42 @@
 module toycoin::unique {
-    // use 0x1::aptos_account;
-    // use 0x1::block;
-    // use 0x1::coin;
-    // use marketplace::coin_listing;
-    // use std::event::{Self, EventHandle};
     use std::signer;
-    // use std::vector;
+    use std::copyable_any;
+    use std::debug;
 
-    struct UniqueEvent has drop, store { msg: vector<u8> }
-
-    struct UniqueResource has key, store {
-        number: u64,
-        msg: vector<u8>,
-        // events: EventHandle<UniqueEvent>,
-    }
-
-    struct ParsedStruct has drop {
+    struct ParsedStruct has drop, store, copy {
         number_u64: u64,
         number_u8: u8,
     }
- 
+    
+    struct UniqueResource has key, store {
+        number: u64,
+        msg: vector<u8>,
+        unique_data: copyable_any::Any,
+    }
+
     struct Unique has drop, copy {
         value: u64,
     }
 
-    public fun new_unique(account: &signer, number: u64, msg: vector<u8>) {
+    public entry fun new_unique(account: &signer, number: u64, msg: vector<u8>) {
+        let data = ParsedStruct {
+            number_u64: 1024,
+            number_u8: 8,
+        };
+
         move_to<UniqueResource>(account, 
         UniqueResource {
             number,
             msg,
+            unique_data: copyable_any::pack<ParsedStruct>(data),
         });
+    }
+
+    public fun get_resources(account: &signer) acquires UniqueResource {
+        let unique_resource = borrow_global<UniqueResource>(signer::address_of(account));
+        let ps = copyable_any::unpack<ParsedStruct>(unique_resource.unique_data);
+        debug::print(unique_resource);
+        debug::print(&ps);
     }
 
     public fun add_one_number(account: &signer) acquires UniqueResource {
@@ -51,8 +58,10 @@ module toycoin::unique {
         5
     }
 
-    public fun parse_vector_to_struct(vec: vector<u8>): ParsedStruct {
-        from_bytes<ParsedStruct>(vec)
+    public fun parse_vector_to_struct(vec: vector<u8>) {
+    // public fun parse_vector_to_struct(vec: vector<u8>): ParsedStruct {
+        from_bytes<ParsedStruct>(vec);
+        // from_bytes<ParsedStruct>(vec)
     }
 
     public fun get_number_u64(ps: &ParsedStruct): u64 {
