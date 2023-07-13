@@ -211,7 +211,8 @@ members = [
     "vm-validator",
 
     # unique
-    "unique/unique-client"
+    "unique/unique-client",
+    "unique/tokens"
 ]
 
 exclude = ["crates/aptos-protos"]

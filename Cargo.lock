@@ -12169,6 +12169,34 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
+name = "tokens"
+version = "0.1.0"
+dependencies = [
+ "aptos-api-test-context",
+ "aptos-cached-packages",
+ "aptos-config",
+ "aptos-framework",
+ "aptos-language-e2e-tests",
+ "aptos-logger",
+ "aptos-node",
+ "aptos-sdk",
+ "aptos-types",
+ "aptos-vm-genesis",
+ "bcs 0.1.4",
+ "clap 4.3.5",
+ "e2e-move-tests",
+ "move-binary-format",
+ "move-core-types",
+ "regex",
+ "sealed_test",
+ "serde 1.0.149",
+ "serde_json",
+ "tokio",
+ "toml 0.5.9",
+ "url",
+]
+
+[[package]]
 name = "tokio"
 version = "1.21.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12864,6 +12892,7 @@ dependencies = [
  "clap 4.3.5",
  "e2e-move-tests",
  "move-binary-format",
+ "move-core-types",
  "regex",
  "sealed_test",
  "serde 1.0.149",
