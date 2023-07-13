@@ -14,6 +14,7 @@ module tokens::unique_coin {
     public entry fun initialize_unique_coin(account: &signer) {
         // Register the coin (Create CoinStore<UniqueCoin> resource)
         coin::register<UniqueCoin>(account);
+        
         // Initialize the coin (Create CoinInfo<UniqueCoin> and get 
         // burn, freeze and mint capability's handles to store)
         let (burn_capability, freeze_capability, mint_capability) = 
@@ -24,13 +25,16 @@ module tokens::unique_coin {
                 9,
                 false,
             );
+
         // Mint the coin
         let unique_coin = coin::mint<UniqueCoin>(
             18446744073709551615,
             &mint_capability,
         );
+
         // Once the coin is minted, deposit it in CoinStore resource
         coin::deposit<UniqueCoin>(signer::address_of(account), unique_coin);
+
         move_to(
             account, 
             UniqueCoinManagement {
