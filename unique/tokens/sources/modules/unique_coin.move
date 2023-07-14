@@ -57,4 +57,59 @@ module tokens::unique_coin {
 
 }
 
-module tokens::escrow { }
+module tokens::escrow {
+    use aptos_framework::coin::{Coin, withdraw, deposit, transfer};
+    use aptos_framework::type_info;
+    use std::signer;
+
+    struct Escrow<phantom T: key> has key {
+        offered_coin: Coin<T>,
+        maker: address,
+        wanted_coin_account_address: address,
+        wanted_coin_module_name: vector<u8>,
+        wanted_coin_struct_name: vector<u8>,
+        wanted_amount: u64,
+    }
+
+    public entry fun initialize<C: key>(
+        account: &signer, 
+        offered_amount: u64,
+        wanted_coin_account_address: address,
+        wanted_coin_module_name: vector<u8>,
+        wanted_coin_struct_name: vector<u8>,
+        wanted_amount: u64,
+        ) {
+        let offered_coin = withdraw<C>(account, offered_amount);
+
+        move_to(
+            account, 
+            Escrow<C> {
+                offered_coin,
+                maker: signer::address_of(account),
+                wanted_coin_account_address,
+                wanted_coin_module_name,
+                wanted_coin_struct_name,
+                wanted_amount,
+            }
+        );
+    }  
+
+    public entry fun accept<O: key, W: key>(account: &signer, maker: address) acquires Escrow {
+        let wanted_coin_info = type_info::type_of<W>();
+        let Escrow {
+            offered_coin,
+            maker,
+            wanted_coin_account_address,
+            wanted_coin_module_name,
+            wanted_coin_struct_name,
+            wanted_amount,
+        } = move_from<Escrow<O>>(maker);
+        assert!(type_info::account_address(&wanted_coin_info) == wanted_coin_account_address, 0);
+        assert!(type_info::module_name(&wanted_coin_info) == wanted_coin_module_name, 0);
+        assert!(type_info::struct_name(&wanted_coin_info) == wanted_coin_struct_name, 0);
+
+        deposit(signer::address_of(account), offered_coin);
+        transfer<W>(account, maker, wanted_amount);
+    }
+    
+ }
