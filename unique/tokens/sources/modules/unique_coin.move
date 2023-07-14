@@ -3,41 +3,47 @@ module tokens::unique_coin {
     use std::string; 
     use std::signer;
 
-    struct UniqueCoin has key {}
+    struct CoinA has key {}
 
-    struct UniqueCoinManagement has key {
-        burn_capability: BurnCapability<UniqueCoin>,
-        freeze_capability: FreezeCapability<UniqueCoin>,
-        mint_capability: MintCapability<UniqueCoin>,
+    struct CoinB has key {}
+
+    struct CoinManagement<phantom C: key> has key {
+        burn_capability: BurnCapability<C>,
+        freeze_capability: FreezeCapability<C>,
+        mint_capability: MintCapability<C>,
     }
 
-    public entry fun initialize_unique_coin(account: &signer) {
-        // Register the coin (Create CoinStore<UniqueCoin> resource)
-        coin::register<UniqueCoin>(account);
+    public entry fun initialize_coin<C: key>(
+        account: &signer, 
+        name: vector<u8>, 
+        symbol: vector<u8>,
+        ) {
+        // Register the coin (Create CoinStore<CoinA> resource)
+        coin::register<C>(account);
         
-        // Initialize the coin (Create CoinInfo<UniqueCoin> and get 
+        // Initialize the coin (Create CoinInfo<CoinA> and get 
         // burn, freeze and mint capability's handles to store)
         let (burn_capability, freeze_capability, mint_capability) = 
-            coin::initialize<UniqueCoin>(
+            coin::initialize<C>(
                 account,
-                string::utf8(b"Unique Coin"),
-                string::utf8(b"UC"),
+                string::utf8(name),
+                string::utf8(symbol),
                 9,
                 false,
             );
 
         // Mint the coin
-        let unique_coin = coin::mint<UniqueCoin>(
+        let unique_coin = coin::mint<C>(
             18446744073709551615,
             &mint_capability,
         );
 
         // Once the coin is minted, deposit it in CoinStore resource
-        coin::deposit<UniqueCoin>(signer::address_of(account), unique_coin);
+        coin::deposit<C>(signer::address_of(account), unique_coin);
 
         move_to(
             account, 
-            UniqueCoinManagement {
+            CoinManagement<C> {
                 burn_capability,
                 freeze_capability,
                 mint_capability,
@@ -46,7 +52,7 @@ module tokens::unique_coin {
     }
 
     public entry fun register_unique_coin(account: &signer) {
-        coin::register<UniqueCoin>(account);
+        coin::register<CoinA>(account);
     }
 
 }

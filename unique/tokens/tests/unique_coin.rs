@@ -20,27 +20,41 @@ fn unique_coin() {
     let _root = Account::new_aptos_root();
     let (_private_key, _public_key) = aptos_vm_genesis::GENESIS_KEYPAIR.clone();
 
-    let coin_account = h.new_account_with_key_pair();
-    let payer = h.new_account_with_key_pair();
+    let module_account = h.new_account_with_key_pair();
+    let alice = h.new_account_with_key_pair();
 
     let mut build_options = BuildOptions::default();
     build_options
         .named_addresses
-        .insert("tokens".to_string(), coin_account.address().clone());
+        .insert("tokens".to_string(), module_account.address().clone());
     let package_path = PathBuf::from(std::env!("CARGO_MANIFEST_DIR")).join("../tokens");
-    h.publish_package_with_options(&coin_account, &package_path, build_options);
+    h.publish_package_with_options(&module_account, &package_path, build_options);
+
+    let mut name_a_bytes = vec![];
+    bcs::serialize_into(&mut name_a_bytes, "CoinA").unwrap();
+    let mut symbol_a_bytes = vec![];
+    bcs::serialize_into(&mut symbol_a_bytes, "CoinA").unwrap();
+
+    let unique_coin_struct_tag = StructTag {
+        address: *module_account.address(),
+        module: ident_str!("unique_coin").to_owned(),
+        name: ident_str!("CoinA").to_owned(),
+        type_params: vec![],
+    };
+    let unique_coin_a_type = TypeTag::Struct(Box::new(unique_coin_struct_tag.clone()));
 
     assert_eq!(
         h.run_entry_function(
-            &coin_account,
+            &module_account,
             str::parse(&format!(
-                "{}::unique_coin::initialize_unique_coin",
-                coin_account.address()
+                "{}::unique_coin::initialize_coin",
+                module_account.address()
             ))
             .unwrap(),
-            vec![],
+            vec![unique_coin_a_type],
             convert_txn_args(&[
-                // TransactionArgument::U64(struct_to_parse.number),
+                TransactionArgument::U8Vector(name_a_bytes),
+                TransactionArgument::U8Vector(symbol_a_bytes)
             ]),
         ),
         TransactionStatus::Keep(aptos_types::transaction::ExecutionStatus::Success)
@@ -48,10 +62,10 @@ fn unique_coin() {
 
     assert_eq!(
         h.run_entry_function(
-            &payer,
+            &alice,
             str::parse(&format!(
                 "{}::unique_coin::register_unique_coin",
-                coin_account.address()
+                module_account.address()
             ))
             .unwrap(),
             vec![],
@@ -61,9 +75,9 @@ fn unique_coin() {
     );
 
     let unique_coin_struct_tag = StructTag {
-        address: *coin_account.address(),
+        address: *module_account.address(),
         module: ident_str!("unique_coin").to_owned(),
-        name: ident_str!("UniqueCoin").to_owned(),
+        name: ident_str!("CoinA").to_owned(),
         type_params: vec![],
     };
     let unique_coin_type = TypeTag::Struct(Box::new(unique_coin_struct_tag.clone()));
@@ -71,11 +85,11 @@ fn unique_coin() {
 
     assert_eq!(
         h.run_entry_function(
-            &coin_account,
+            &module_account,
             str::parse(&format!("0x1::coin::transfer")).unwrap(),
             vec![unique_coin_type.clone()],
             convert_txn_args(&[
-                TransactionArgument::Address(*payer.address()),
+                TransactionArgument::Address(*alice.address()),
                 TransactionArgument::U64(transfer_amount),
             ]),
         ),
@@ -83,7 +97,7 @@ fn unique_coin() {
     );
     let payer_unique_coin_store = h
         .read_resource::<CoinStoreResource>(
-            payer.address(),
+            alice.address(),
             StructTag {
                 address: addresses::CORE_CODE_ADDRESS,
                 module: ident_str!("coin").to_owned(),

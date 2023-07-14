@@ -12224,7 +12224,7 @@ dependencies = [
  "serde 1.0.149",
  "serde_json",
  "tokio",
- "toml 0.5.9",
+ "toml 0.7.4",
  "url",
 ]
 
@@ -12921,7 +12921,7 @@ dependencies = [
  "serde 1.0.149",
  "serde_json",
  "tokio",
- "toml 0.5.9",
+ "toml 0.7.4",
  "url",
 ]
 
