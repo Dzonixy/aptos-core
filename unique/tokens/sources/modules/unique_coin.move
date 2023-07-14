@@ -51,8 +51,8 @@ module tokens::unique_coin {
         );
     }
 
-    public entry fun register_unique_coin(account: &signer) {
-        coin::register<CoinA>(account);
+    public entry fun register_unique_coin<C: key>(account: &signer) {
+        coin::register<C>(account);
     }
 
 }
