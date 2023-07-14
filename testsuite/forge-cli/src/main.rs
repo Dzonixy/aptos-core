@@ -238,7 +238,7 @@ fn main() -> Result<()> {
         // cmd input for test
         CliCommand::Test(ref test_cmd) => {
             // Identify the test suite to run
-            let mut test_suite = get_test_suite(suite_name, duration)?;
+            let mut test_suite = get_test_suite(suite_name, duration, test_cmd)?;
 
             // Identify the number of validators and fullnodes to run
             // (if overriding what test has specified)
@@ -445,7 +445,11 @@ fn get_changelog(prev_commit: Option<&String>, upstream_commit: &str) -> String 
     }
 }
 
-fn get_test_suite(suite_name: &str, duration: Duration) -> Result<ForgeConfig> {
+fn get_test_suite(
+    suite_name: &str,
+    duration: Duration,
+    test_cmd: &TestCommand,
+) -> Result<ForgeConfig> {
     match suite_name {
         "local_test_suite" => Ok(local_test_suite()),
         "pre_release" => Ok(pre_release_suite()),
@@ -453,7 +457,7 @@ fn get_test_suite(suite_name: &str, duration: Duration) -> Result<ForgeConfig> {
         // TODO(rustielin): verify each test suite
         "k8s_suite" => Ok(k8s_test_suite()),
         "chaos" => Ok(chaos_test_suite(duration)),
-        single_test => single_test_suite(single_test, duration),
+        single_test => single_test_suite(single_test, duration, test_cmd),
     }
 }
 
@@ -486,11 +490,15 @@ fn k8s_test_suite() -> ForgeConfig {
         .add_network_test(PerformanceBenchmark)
 }
 
-fn single_test_suite(test_name: &str, duration: Duration) -> Result<ForgeConfig> {
+fn single_test_suite(
+    test_name: &str,
+    duration: Duration,
+    test_cmd: &TestCommand,
+) -> Result<ForgeConfig> {
     let single_test_suite = match test_name {
         // Land-blocking tests to be run on every PR:
         "land_blocking" => land_blocking_test_suite(duration), // to remove land_blocking, superseeded by the below
-        "realistic_env_max_load" => realistic_env_max_load_test(duration),
+        "realistic_env_max_load" => realistic_env_max_load_test(duration, test_cmd),
         "compat" => compat(),
         "framework_upgrade" => upgrade(),
         // Rest of the tests:
@@ -541,8 +549,12 @@ fn single_test_suite(test_name: &str, duration: Duration) -> Result<ForgeConfig>
         "quorum_store_reconfig_enable_test" => quorum_store_reconfig_enable_test(),
         "mainnet_like_simulation_test" => mainnet_like_simulation_test(),
         "multiregion_benchmark_test" => multiregion_benchmark_test(),
-        "pfn_const_tps" => pfn_const_tps(duration),
-        "pfn_performance" => pfn_performance(duration),
+        "pfn_const_tps" => pfn_const_tps(duration, false, false),
+        "pfn_const_tps_with_network_chaos" => pfn_const_tps(duration, false, true),
+        "pfn_const_tps_with_realistic_env" => pfn_const_tps(duration, true, true),
+        "pfn_performance" => pfn_performance(duration, false, false),
+        "pfn_performance_with_network_chaos" => pfn_performance(duration, false, true),
+        "pfn_performance_with_realistic_env" => pfn_performance(duration, true, true),
         _ => return Err(format_err!("Invalid --suite given: {:?}", test_name)),
     };
     Ok(single_test_suite)
@@ -550,12 +562,8 @@ fn single_test_suite(test_name: &str, duration: Duration) -> Result<ForgeConfig>
 
 fn wrap_with_realistic_env<T: NetworkTest + 'static>(test: T) -> CompositeNetworkTest {
     CompositeNetworkTest::new_with_two_wrappers(
-        MultiRegionNetworkEmulationTest {
-            override_config: None,
-        },
-        CpuChaosTest {
-            override_config: None,
-        },
+        MultiRegionNetworkEmulationTest::default(),
+        CpuChaosTest::default(),
         test,
     )
 }
@@ -1455,8 +1463,14 @@ fn land_blocking_test_suite(duration: Duration) -> ForgeConfig {
 }
 
 // TODO: Replace land_blocking when performance reaches on par with current land_blocking
-fn realistic_env_max_load_test(duration: Duration) -> ForgeConfig {
+fn realistic_env_max_load_test(duration: Duration, test_cmd: &TestCommand) -> ForgeConfig {
+    let ha_proxy = if let TestCommand::K8sSwarm(k8s) = test_cmd {
+        k8s.enable_haproxy
+    } else {
+        false
+    };
     let duration_secs = duration.as_secs();
+    let long_running = duration_secs >= 2400;
     ForgeConfig::default()
         .with_initial_validator_count(NonZeroUsize::new(20).unwrap())
         .with_initial_fullnode_count(10)
@@ -1466,12 +1480,20 @@ fn realistic_env_max_load_test(duration: Duration) -> ForgeConfig {
                     mempool_backlog: 40000,
                 })
                 .init_gas_price_multiplier(20),
-            inner_success_criteria: SuccessCriteria::new(5000),
+            inner_success_criteria: SuccessCriteria::new(
+                if ha_proxy {
+                    4700
+                } else if long_running {
+                    5500
+                } else {
+                    5000
+                },
+            ),
         }))
         .with_genesis_helm_config_fn(Arc::new(move |helm_values| {
             // Have single epoch change in land blocking, and a few on long-running
             helm_values["chain"]["epoch_duration_secs"] =
-                (if duration_secs >= 1800 { 600 } else { 300 }).into();
+                (if long_running { 600 } else { 300 }).into();
         }))
         // First start higher gas-fee traffic, to not cause issues with TxnEmitter setup - account creation
         .with_emit_job(
@@ -1511,9 +1533,7 @@ fn realistic_network_tuned_for_throughput_test() -> ForgeConfig {
         // something to potentially improve upon.
         // So having VFNs for all validators
         .with_initial_fullnode_count(12)
-        .add_network_test(MultiRegionNetworkEmulationTest {
-            override_config: None,
-        })
+        .add_network_test(MultiRegionNetworkEmulationTest::default())
         .with_emit_job(EmitJobRequest::default().mode(EmitJobMode::MaxLoad {
             mempool_backlog: 150000,
         }))
@@ -1787,12 +1807,8 @@ fn mainnet_like_simulation_test() -> ForgeConfig {
                 .txn_expiration_time_secs(5 * 60),
         )
         .add_network_test(CompositeNetworkTest::new(
-            MultiRegionNetworkEmulationTest {
-                override_config: None,
-            },
-            CpuChaosTest {
-                override_config: None,
-            },
+            MultiRegionNetworkEmulationTest::default(),
+            CpuChaosTest::default(),
         ))
         .with_genesis_helm_config_fn(Arc::new(|helm_values| {
             // no epoch change.
@@ -1855,18 +1871,25 @@ fn multiregion_benchmark_test() -> ForgeConfig {
 /// This test runs a constant-TPS benchmark where the network includes
 /// PFNs, and the transactions are submitted to the PFNs. This is useful
 /// for measuring latencies when the system is not saturated.
-fn pfn_const_tps(duration: Duration) -> ForgeConfig {
+///
+/// Note: If `add_cpu_chaos` is true, CPU chaos is enabled on the entire swarm.
+/// Likewise, if `add_network_emulation` is true, network chaos is enabled.
+fn pfn_const_tps(
+    duration: Duration,
+    add_cpu_chaos: bool,
+    add_network_emulation: bool,
+) -> ForgeConfig {
     ForgeConfig::default()
         .with_initial_validator_count(NonZeroUsize::new(20).unwrap())
         .with_initial_fullnode_count(10)
-        .with_emit_job(EmitJobRequest::default().mode(EmitJobMode::ConstTps { tps: 500 }))
-        .add_network_test(PFNPerformance)
+        .with_emit_job(EmitJobRequest::default().mode(EmitJobMode::ConstTps { tps: 100 }))
+        .add_network_test(PFNPerformance::new(add_cpu_chaos, add_network_emulation))
         .with_genesis_helm_config_fn(Arc::new(|helm_values| {
             // Require frequent epoch changes
             helm_values["chain"]["epoch_duration_secs"] = 300.into();
         }))
         .with_success_criteria(
-            SuccessCriteria::new(0)
+            SuccessCriteria::new(50)
                 .add_no_restarts()
                 .add_wait_for_catchup_s(
                     // Give at least 60s for catchup and at most 10% of the run
@@ -1882,17 +1905,34 @@ fn pfn_const_tps(duration: Duration) -> ForgeConfig {
 /// This test runs a performance benchmark where the network includes
 /// PFNs, and the transactions are submitted to the PFNs. This is useful
 /// for measuring maximum throughput and latencies.
-fn pfn_performance(duration: Duration) -> ForgeConfig {
+///
+/// Note: If `add_cpu_chaos` is true, CPU chaos is enabled on the entire swarm.
+/// Likewise, if `add_network_emulation` is true, network chaos is enabled.
+fn pfn_performance(
+    duration: Duration,
+    add_cpu_chaos: bool,
+    add_network_emulation: bool,
+) -> ForgeConfig {
+    // Determine the minimum expected TPS
+    let min_expected_tps = if add_cpu_chaos {
+        3000
+    } else if add_network_emulation {
+        4000
+    } else {
+        4500
+    };
+
+    // Create the forge config
     ForgeConfig::default()
         .with_initial_validator_count(NonZeroUsize::new(20).unwrap())
         .with_initial_fullnode_count(10)
-        .add_network_test(PFNPerformance)
+        .add_network_test(PFNPerformance::new(add_cpu_chaos, add_network_emulation))
         .with_genesis_helm_config_fn(Arc::new(|helm_values| {
             // Require frequent epoch changes
             helm_values["chain"]["epoch_duration_secs"] = 300.into();
         }))
         .with_success_criteria(
-            SuccessCriteria::new(4500)
+            SuccessCriteria::new(min_expected_tps)
                 .add_no_restarts()
                 .add_wait_for_catchup_s(
                     // Give at least 60s for catchup and at most 10% of the run
