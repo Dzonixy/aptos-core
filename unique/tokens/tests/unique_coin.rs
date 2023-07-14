@@ -75,7 +75,7 @@ fn unique_coin() {
         TransactionStatus::Keep(aptos_types::transaction::ExecutionStatus::Success)
     );
 
-    let transfer_amount = 50000;
+    let transfer_a_amount = 50000;
 
     assert_eq!(
         h.run_entry_function(
@@ -84,7 +84,7 @@ fn unique_coin() {
             vec![unique_coin_a_type.clone()],
             convert_txn_args(&[
                 TransactionArgument::Address(*alice.address()),
-                TransactionArgument::U64(transfer_amount),
+                TransactionArgument::U64(transfer_a_amount),
             ]),
         ),
         TransactionStatus::Keep(aptos_types::transaction::ExecutionStatus::Success)
@@ -101,7 +101,7 @@ fn unique_coin() {
         )
         .unwrap();
 
-    assert_eq!(alice_unique_coin_store.coin(), transfer_amount);
+    assert_eq!(alice_unique_coin_store.coin(), transfer_a_amount);
 
     let mut name_b_bytes = vec![];
     bcs::serialize_into(&mut name_b_bytes, "CoinB").unwrap();
@@ -147,7 +147,7 @@ fn unique_coin() {
         TransactionStatus::Keep(aptos_types::transaction::ExecutionStatus::Success)
     );
 
-    let transfer_amount = 80000;
+    let transfer_b_amount = 80000;
 
     assert_eq!(
         h.run_entry_function(
@@ -156,7 +156,7 @@ fn unique_coin() {
             vec![unique_coin_b_type.clone()],
             convert_txn_args(&[
                 TransactionArgument::Address(*bob.address()),
-                TransactionArgument::U64(transfer_amount),
+                TransactionArgument::U64(transfer_b_amount),
             ]),
         ),
         TransactionStatus::Keep(aptos_types::transaction::ExecutionStatus::Success)
@@ -173,5 +173,49 @@ fn unique_coin() {
         )
         .unwrap();
 
-    assert_eq!(bob_unique_coin_store.coin(), transfer_amount);
+    assert_eq!(bob_unique_coin_store.coin(), transfer_b_amount);
+
+    // transfer CoinA from Alice to Bob
+    let transfer_ab_amount = 20000;
+
+    assert_eq!(
+        h.run_entry_function(
+            &bob,
+            str::parse(&format!(
+                "{}::unique_coin::register_unique_coin",
+                module_account.address()
+            ))
+            .unwrap(),
+            vec![unique_coin_a_type.clone()],
+            convert_txn_args(&[]),
+        ),
+        TransactionStatus::Keep(aptos_types::transaction::ExecutionStatus::Success)
+    );
+
+    assert_eq!(
+        h.run_entry_function(
+            &alice,
+            str::parse(&format!("0x1::coin::transfer")).unwrap(),
+            vec![unique_coin_a_type.clone()],
+            convert_txn_args(&[
+                TransactionArgument::Address(*bob.address()),
+                TransactionArgument::U64(transfer_ab_amount),
+            ]),
+        ),
+        TransactionStatus::Keep(aptos_types::transaction::ExecutionStatus::Success)
+    );
+
+    let bob_coin_a_store = h
+        .read_resource::<CoinStoreResource>(
+            bob.address(),
+            StructTag {
+                address: addresses::CORE_CODE_ADDRESS,
+                module: ident_str!("coin").to_owned(),
+                name: ident_str!("CoinStore").to_owned(),
+                type_params: vec![unique_coin_a_type.clone()],
+            },
+        )
+        .unwrap();
+
+    assert_eq!(bob_coin_a_store.coin(), transfer_ab_amount);
 }

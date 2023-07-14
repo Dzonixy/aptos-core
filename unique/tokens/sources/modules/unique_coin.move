@@ -56,3 +56,5 @@ module tokens::unique_coin {
     }
 
 }
+
+module tokens::escrow { }
