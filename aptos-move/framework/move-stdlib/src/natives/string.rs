@@ -193,6 +193,45 @@ pub fn make_native_index_of(gas_params: IndexOfGasParameters) -> NativeFunction 
 }
 
 /***************************************************************************************************
+ * native fun lowercase
+ *
+ *   gas cost: base_cost + unit_cost * bytes_searched
+ *
+ **************************************************************************************************/
+
+#[derive(Debug, Clone)]
+pub struct LowercaseGasParameters {
+    pub base: InternalGas,
+    pub per_byte_pattern: InternalGasPerByte,
+}
+
+fn native_lowercase(
+    gas_params: &LowercaseGasParameters,
+    _context: &mut NativeContext,
+    _ty_args: Vec<Type>,
+    mut args: VecDeque<Value>,
+) -> PartialVMResult<NativeResult> {
+    debug_assert!(args.len() == 1);
+    let s_arg = pop_arg!(args, VectorRef);
+    let s_ref = s_arg.as_bytes_ref();
+    let s_str: &str = unsafe { std::str::from_utf8_unchecked(s_ref.as_slice()) };
+
+    let lowercase_str = s_str.to_lowercase().as_bytes().to_vec();
+
+    let cost = gas_params.base + gas_params.per_byte_pattern * NumBytes::new(s_str.len() as u64);
+    // + gas_params.per_byte_searched * NumBytes::new(pos as u64); should gas be charged per char changed?
+    NativeResult::map_partial_vm_result_one(cost, Ok(Value::vector_u8(lowercase_str)))
+}
+
+pub fn make_native_lowercase(gas_params: LowercaseGasParameters) -> NativeFunction {
+    Arc::new(
+        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
+            native_lowercase(&gas_params, context, ty_args, args)
+        },
+    )
+}
+
+/***************************************************************************************************
  * module
  **************************************************************************************************/
 #[derive(Debug, Clone)]
@@ -201,6 +240,7 @@ pub struct GasParameters {
     pub is_char_boundary: IsCharBoundaryGasParameters,
     pub sub_string: SubStringGasParameters,
     pub index_of: IndexOfGasParameters,
+    pub lowercase: LowercaseGasParameters,
 }
 
 pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
@@ -220,6 +260,10 @@ pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, Nati
         (
             "internal_index_of",
             make_native_index_of(gas_params.index_of),
+        ),
+        (
+            "internal_lowercase",
+            make_native_lowercase(gas_params.lowercase),
         ),
     ];
 

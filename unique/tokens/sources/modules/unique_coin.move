@@ -2,6 +2,7 @@ module tokens::unique_coin {
     use aptos_framework::coin::{Self, BurnCapability, FreezeCapability, MintCapability};
     use std::string; 
     use std::signer;
+    use std::debug;
 
     struct CoinA has key {}
 
@@ -20,6 +21,12 @@ module tokens::unique_coin {
         ) {
         // Register the coin (Create CoinStore<CoinA> resource)
         coin::register<C>(account);
+
+
+        let caps = string::utf8(b"PERA");
+        debug::print(&caps);
+        let low = string::lowercase(&caps);
+        debug::print(&low);
         
         // Initialize the coin (Create CoinInfo<CoinA> and get 
         // burn, freeze and mint capability's handles to store)

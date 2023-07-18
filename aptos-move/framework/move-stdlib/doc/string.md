@@ -18,10 +18,12 @@ The <code><a href="string.md#0x1_string">string</a></code> module defines the <c
 -  [Function `insert`](#0x1_string_insert)
 -  [Function `sub_string`](#0x1_string_sub_string)
 -  [Function `index_of`](#0x1_string_index_of)
+-  [Function `lowercase`](#0x1_string_lowercase)
 -  [Function `internal_check_utf8`](#0x1_string_internal_check_utf8)
 -  [Function `internal_is_char_boundary`](#0x1_string_internal_is_char_boundary)
 -  [Function `internal_sub_string`](#0x1_string_internal_sub_string)
 -  [Function `internal_index_of`](#0x1_string_internal_index_of)
+-  [Function `internal_lowercase`](#0x1_string_internal_lowercase)
 -  [Specification](#@Specification_1)
     -  [Function `internal_check_utf8`](#@Specification_1_internal_check_utf8)
     -  [Function `internal_is_char_boundary`](#@Specification_1_internal_is_char_boundary)
@@ -359,6 +361,30 @@ Computes the index of the first occurrence of a string. Returns <code><a href="s
 
 </details>
 
+<a name="0x1_string_lowercase"></a>
+
+## Function `lowercase`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="string.md#0x1_string_lowercase">lowercase</a>(s: &<a href="string.md#0x1_string_String">string::String</a>): <a href="string.md#0x1_string_String">string::String</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="string.md#0x1_string_lowercase">lowercase</a>(s: &<a href="string.md#0x1_string_String">String</a>): <a href="string.md#0x1_string_String">String</a> {
+    <a href="string.md#0x1_string_String">String</a> { bytes: <a href="string.md#0x1_string_internal_lowercase">internal_lowercase</a>(&s.bytes) }
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_string_internal_check_utf8"></a>
 
 ## Function `internal_check_utf8`
@@ -441,6 +467,28 @@ Computes the index of the first occurrence of a string. Returns <code><a href="s
 
 
 <pre><code><b>native</b> <b>fun</b> <a href="string.md#0x1_string_internal_index_of">internal_index_of</a>(v: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;, r: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;): u64;
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_string_internal_lowercase"></a>
+
+## Function `internal_lowercase`
+
+
+
+<pre><code><b>fun</b> <a href="string.md#0x1_string_internal_lowercase">internal_lowercase</a>(v: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;): <a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>native</b> <b>fun</b> <a href="string.md#0x1_string_internal_lowercase">internal_lowercase</a>(v: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;): <a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;;
 </code></pre>
 
 

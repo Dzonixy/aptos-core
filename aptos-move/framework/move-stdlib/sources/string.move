@@ -85,9 +85,14 @@ module std::string {
         internal_index_of(&s.bytes, &r.bytes)
     }
 
+    public fun lowercase(s: &String): String {
+        String { bytes: internal_lowercase(&s.bytes) }
+    }
+
     // Native API
     public native fun internal_check_utf8(v: &vector<u8>): bool;
     native fun internal_is_char_boundary(v: &vector<u8>, i: u64): bool;
     native fun internal_sub_string(v: &vector<u8>, i: u64, j: u64): vector<u8>;
     native fun internal_index_of(v: &vector<u8>, r: &vector<u8>): u64;
+    native fun internal_lowercase(v: &vector<u8>): vector<u8>;
 }
