@@ -1,5 +1,3 @@
-use std::{path::PathBuf, thread};
-
 use aptos_api_test_context::TestContext;
 use aptos_cached_packages::aptos_stdlib;
 use aptos_language_e2e_tests::{
@@ -11,6 +9,7 @@ use aptos_types::{
     account_config::AccountResource,
     transaction::{ExecutionStatus, Module, Script, TransactionArgument, TransactionStatus},
 };
+use std::{path::PathBuf, thread};
 
 #[test]
 fn mint_to_new_account() {
@@ -40,11 +39,10 @@ fn mint_to_new_account() {
     let code = std::fs::read(script_path).unwrap();
     let script_txn = root
         .transaction()
-        .script(Script::new(
-            code,
-            vec![],
-            vec![TransactionArgument::U64(1), TransactionArgument::U64(1)],
-        ))
+        .script(Script::new(code, vec![], vec![
+            TransactionArgument::U64(1),
+            TransactionArgument::U64(1),
+        ]))
         .gas_unit_price(100)
         .sequence_number(0)
         .sign();

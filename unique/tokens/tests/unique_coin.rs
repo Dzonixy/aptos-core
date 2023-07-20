@@ -1,6 +1,5 @@
-use std::{path::PathBuf, vec};
-
 use aptos_framework::BuildOptions;
+
 use aptos_language_e2e_tests::account::Account;
 use aptos_sdk::move_types::{
     language_storage::{StructTag, TypeTag},
@@ -12,6 +11,7 @@ use aptos_types::{
 };
 use e2e_move_tests::MoveHarness;
 use move_core_types::ident_str;
+use std::{path::PathBuf, vec};
 
 #[test]
 fn unique_coin() {

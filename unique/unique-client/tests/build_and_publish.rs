@@ -42,13 +42,13 @@ async fn build_and_publish() {
         .join("../toycoin/build/Toycoin/bytecode_scripts/main.mv");
     let code = std::fs::read(script_path).unwrap();
 
-    let script_txn = module_account.sign_with_transaction_builder(
-        context.transaction_factory().script(Script::new(
-            code,
-            vec![],
-            vec![TransactionArgument::U64(1), TransactionArgument::U64(1)],
-        )),
-    );
+    let script_txn =
+        module_account.sign_with_transaction_builder(context.transaction_factory().script(
+            Script::new(code, vec![], vec![
+                TransactionArgument::U64(1),
+                TransactionArgument::U64(1),
+            ]),
+        ));
 
     context.commit_block(&[script_txn]).await;
 }

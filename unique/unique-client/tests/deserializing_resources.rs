@@ -1,11 +1,10 @@
-use std::path::PathBuf;
-
 use aptos_framework::BuildOptions;
 use aptos_language_e2e_tests::account::Account;
 use aptos_sdk::move_types::{identifier::Identifier, language_storage::StructTag};
 use aptos_types::transaction::{TransactionArgument, TransactionStatus};
 use e2e_move_tests::MoveHarness;
 use serde::Deserialize;
+use std::path::PathBuf;
 
 #[test]
 fn deserializing_resources() {
@@ -33,32 +32,24 @@ fn deserializing_resources() {
         number,
         msg: "hello world".to_string(),
     };
-    let mut script_txn = h.create_script(
-        &payer,
-        code,
-        vec![],
-        vec![
-            TransactionArgument::U64(1),
-            TransactionArgument::U64(1),
-            TransactionArgument::U64(expected_recource.number),
-            TransactionArgument::U8Vector(expected_recource.msg.to_owned().into_bytes()),
-        ],
-    );
+    let mut script_txn = h.create_script(&payer, code, vec![], vec![
+        TransactionArgument::U64(1),
+        TransactionArgument::U64(1),
+        TransactionArgument::U64(expected_recource.number),
+        TransactionArgument::U8Vector(expected_recource.msg.to_owned().into_bytes()),
+    ]);
     assert_eq!(
         h.run(script_txn),
         TransactionStatus::Keep(aptos_types::transaction::ExecutionStatus::Success)
     );
 
     let mut resource = h
-        .read_resource::<UniqueResource>(
-            payer.address(),
-            StructTag {
-                address: module_account.address().to_owned(),
-                module: Identifier::new("unique").unwrap(),
-                name: Identifier::new("UniqueResource").unwrap(),
-                type_params: vec![],
-            },
-        )
+        .read_resource::<UniqueResource>(payer.address(), StructTag {
+            address: module_account.address().to_owned(),
+            module: Identifier::new("unique").unwrap(),
+            name: Identifier::new("UniqueResource").unwrap(),
+            type_params: vec![],
+        })
         .unwrap();
 
     assert_eq!(resource, expected_recource);
@@ -74,15 +65,12 @@ fn deserializing_resources() {
     );
 
     resource = h
-        .read_resource::<UniqueResource>(
-            payer.address(),
-            StructTag {
-                address: module_account.address().to_owned(),
-                module: Identifier::new("unique").unwrap(),
-                name: Identifier::new("UniqueResource").unwrap(),
-                type_params: vec![],
-            },
-        )
+        .read_resource::<UniqueResource>(payer.address(), StructTag {
+            address: module_account.address().to_owned(),
+            module: Identifier::new("unique").unwrap(),
+            name: Identifier::new("UniqueResource").unwrap(),
+            type_params: vec![],
+        })
         .unwrap();
 
     assert_eq!(number + 1, resource.number);

@@ -1,5 +1,3 @@
-use std::{path::PathBuf, vec};
-
 use aptos_framework::{natives::any::Any, BuildOptions};
 use aptos_language_e2e_tests::account::Account;
 use aptos_sdk::move_types::{
@@ -8,6 +6,7 @@ use aptos_sdk::move_types::{
 use aptos_types::transaction::{TransactionArgument, TransactionStatus};
 use e2e_move_tests::MoveHarness;
 use serde::{Deserialize, Serialize};
+use std::{path::PathBuf, vec};
 
 #[test]
 fn parse_struct() {

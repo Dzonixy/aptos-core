@@ -3,7 +3,6 @@ name = "Tokens"
 version = "0.0.0"
 
 [addresses]
-tokens = "_"
 
 [dependencies]
 AptosFramework = { local = "../../aptos-move/framework/aptos-framework" }
