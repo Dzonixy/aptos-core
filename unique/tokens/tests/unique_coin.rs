@@ -1,5 +1,4 @@
 use aptos_framework::BuildOptions;
-
 use aptos_language_e2e_tests::account::Account;
 use aptos_sdk::move_types::{
     language_storage::{StructTag, TypeTag},
